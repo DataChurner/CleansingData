@@ -12,23 +12,12 @@
 # subject_train.txt - subjects who took part in the training - column names attached
 # similarly we have test data
 trainx <- read.table("X_train.txt")
-trainy <- read.table("y_train.txt",col.names = "act.id")
-trainsub <- read.table("subject_train.txt",col.names = "sub.id")
+trainy <- read.table("y_train.txt",col.names = "act_id")
+trainsub <- read.table("subject_train.txt",col.names = "subject")
 testx <- read.table("X_test.txt")
-testy <- read.table("y_test.txt",col.names = "act.id")
-testsub <- read.table("subject_test.txt",col.names = "sub.id")
+testy <- read.table("y_test.txt",col.names = "act_id")
+testsub <- read.table("subject_test.txt",col.names = "subject")
 
-# load activity labels, and merge them with the training and test activity
-# 1 - Walking
-# 2 - Walking Upstairs etc.
-# activity ID and activity name linked to each observation
-actlabel <- read.table("activity_labels.txt", col.names = c("act.id","activity"))
-train_act <- merge(trainy,actlabel, by = "act.id", all = TRUE) 
-test_act <- merge(testy,actlabel, by = "act.id", all = TRUE)
-
-# activity linked to each subject in each observation
-temp_train <- cbind(train_act,trainsub)
-temp_test <- cbind(test_act,testsub)
 
 # get a list of variables collected/calculated  
 variables <- read.table("features.txt")
@@ -43,12 +32,28 @@ names(testx) <- variables$V2
 extracttrainx <- trainx[,varsub]
 extracttestx <- testx[,varsub]
 
-# associate the activity/subject table with the extracted data table 
-train <- cbind(temp_train,extracttrainx)
-test <- cbind(temp_test,extracttestx)
+# combine the training data
+train_act_sub <- cbind(trainy,trainsub)
+train <- cbind(train_act_sub,extracttrainx)
 
-# Finally combine the training and test results
-combined <- merge(train,test,all = TRUE)
+# combine the test data
+test_act_sub <- cbind(testy,testsub)
+test <- cbind(test_act_sub,extracttestx)
+
+# combine training and test data
+combined <- rbind(train,test) 
+
+# load activity labels, and merge them with the training and test activity
+# 1 - Walking
+# 2 - Walking Upstairs etc.
+# activity ID and activity name linked to each observation
+actlabel <- read.table("activity_labels.txt", col.names = c("act_id","activity"))
+
+#merge the activity with the combined data
+withlabel <- merge(actlabel,combined, by = "act_id", all = TRUE)
+
+# get rid of the activity id column
+final <- withlabel[,(2:ncol(withlabel))]
 
 # for the fifth assignment
 # the first three variables are the key - note that activity id associates directly to the activity name
@@ -59,13 +64,11 @@ combined <- merge(train,test,all = TRUE)
 # although they are completely missing
 
 require("plyr")
-groupcols <- colnames(combined)[1:3]
-datacols <- colnames(combined)[4:ncol(combined)]
-combinedmean <- ddply(combined, groupcols, function(x) colMeans(x[datacols],na.rm = TRUE))
+groupcols <- colnames(final)[1:2]
+datacols <- colnames(final)[3:ncol(final)]
+combinedmean <- ddply(final, groupcols, function(x) colMeans(x[datacols],na.rm = TRUE))
 
 # The file contains the output of combinedmean dataframe
 write.table(combinedmean,"combinedmean.txt",row.name=FALSE) 
-
-
 
 
